@@ -2,32 +2,63 @@
    session_start();
    error_reporting(1);
    include('includes/config.php');
+   
    if($_SESSION['alogin']!=''){
-		$_SESSION['alogin']='';
-   }
-   if(isset($_POST['login']))
-   {
-	   $uname=$_POST['username'];
-	   $password=md5($_POST['password']);
-	   
-		$sql ="SELECT UserName,Password, is_admin FROM users WHERE UserName='$uname' and Password='$password'";
-		$result = $dbh1->query($sql);
-
-		if ($result->num_rows > 0) {
-				while($row = $result->fetch_array()) {
-				 $_SESSION['alogin']=$row[0];
-				 $_SESSION['is_admin']=$row[2];
-				}
-				header('Location: dashboard.php');
-		}
-	   else{
-		   $_SESSION['msgErreur'] = "Mauvais identifiant / mot de passe.";
-	   
-	   }
-   
+      $_SESSION['alogin']='';
    }
    
-   ?>
+   if(isset($_POST['login'])) {
+      try {
+         // Clean and validate input
+         $uname = trim($_POST['username']);
+         $password = $_POST['password'];
+         
+         if(empty($uname) || empty($password)) {
+            $_SESSION['msgErreur'] = "Veuillez remplir tous les champs.";
+         } else {
+            // Use prepared statement with PDO
+            $stmt = $dbh->prepare("SELECT UserName, Password, is_admin FROM users WHERE UserName = :username");
+            $stmt->bindParam(':username', $uname, PDO::PARAM_STR);
+            $stmt->execute();
+            
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if($user) {
+               // For existing users with MD5 passwords (legacy)
+               if(strlen($user['Password']) == 32 && $user['Password'] === md5($password)) {
+                  // Upgrade to password_hash if using old MD5
+                  $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                  $updateStmt = $dbh->prepare("UPDATE users SET Password = :password WHERE UserName = :username");
+                  $updateStmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+                  $updateStmt->bindParam(':username', $uname, PDO::PARAM_STR);
+                  $updateStmt->execute();
+                  
+                  // Login the user
+                  $_SESSION['alogin'] = $user['UserName'];
+                  $_SESSION['is_admin'] = $user['is_admin'];
+                  header('Location: dashboard.php');
+                  exit();
+               } 
+               // For users with bcrypt passwords (new secure system)
+               else if(password_verify($password, $user['Password'])) {
+                  $_SESSION['alogin'] = $user['UserName'];
+                  $_SESSION['is_admin'] = $user['is_admin'];
+                  header('Location: dashboard.php');
+                  exit();
+               } else {
+                  $_SESSION['msgErreur'] = "Mauvais identifiant / mot de passe.";
+               }
+            } else {
+               $_SESSION['msgErreur'] = "Mauvais identifiant / mot de passe.";
+            }
+         }
+      } catch(PDOException $e) {
+         // Log error for administrators but show generic message to users
+         error_log("Authentication error: " . $e->getMessage());
+         $_SESSION['msgErreur'] = "Une erreur s'est produite. Veuillez réessayer plus tard.";
+      }
+   }
+?>
 <!DOCTYPE html>
 <html lang="en">
    <head>
@@ -56,15 +87,7 @@
    <body class="" style="background-image: url(assets/images/back2.jpg);
       background-color: #ffffff;
       background-size: cover;
-      height: 100%;
-
-
- 
- 
-  /* Center and scale the image nicely */
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;">
+      height: 100%;">
   
       <div class="main-wrapper">
          <div class="">
@@ -86,7 +109,7 @@
                                        </div>
                                     </div>
 									<?php if (isset($_SESSION['msgErreur'])) { ?>
-																	<p class="error-message"><?php echo $_SESSION['msgErreur']; unset($_SESSION['msgErreur']);?> </p><br><br>
+									<p class="error-message"><?php echo htmlspecialchars($_SESSION['msgErreur']); unset($_SESSION['msgErreur']);?> </p><br><br>
 									<?php } ?>
                                     <div class="panel-body p-20">
                                        <form class="admin-login" method="post">
@@ -102,45 +125,33 @@
                                                 <button type="submit" name="login" class="btn login-btn">Se Connecter</button>
 
                                           </div>
-										                                         <div class="col-sm-6">
+										  <div class="col-sm-6">
                                             <a href="index.php" class="text-white">Retour à l'accueil</a>
-                                        </div>
+                                          </div>
                                           <br>
                                        </form>
                                     </div>
                                  </div>
                               </div>
-                              <!-- /.col-md-11 -->
                            </div>
-                           <!-- /.row -->
                         </div>
-                        <!-- /.col-md-12 -->
                      </div>
-                     <!-- /.row -->
                   </section>
                </div>
-               <!-- /.col-md-6 -->
             </div>
-            <!-- /.row -->
          </div>
-         <!-- /. -->
       </div>
-      <!-- /.main-wrapper -->
-      <!-- ========== COMMON JS FILES ========== -->
       <script src="assets/js/jquery/jquery-2.2.4.min.js"></script>
       <script src="assets/js/jquery-ui/jquery-ui.min.js"></script>
       <script src="assets/js/bootstrap/bootstrap.min.js"></script>
       <script src="assets/js/pace/pace.min.js"></script>
       <script src="assets/js/lobipanel/lobipanel.min.js"></script>
       <script src="assets/js/iscroll/iscroll.js"></script>
-      <!-- ========== PAGE JS FILES ========== -->
-      <!-- ========== THEME JS ========== -->
       <script src="assets/js/main.js"></script>
       <script>
          $(function(){
          
          });
       </script>
- 
    </body>
 </html>
