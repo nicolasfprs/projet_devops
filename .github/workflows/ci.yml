@@ -1,37 +1,26 @@
-name: Deploy Note Website
+name: CI/CD for PHP App
+ 
 on: [push, pull_request]
-
 jobs:
-    test:
-        runs-on: ubuntu-latest
-
-        name: CI/CD Pipeline
-
-  test-and-security:
+  security:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run unit tests
-        run: python -m pytest tests/
-
-      - name: Security analysis with Snyk
-        uses: snyk/actions/python@v3
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-      - name: Code analysis with SonarQube
+      - name: Récupérer le code
+        uses: actions/checkout@v3      
+ 
+      - name: Installer SonarScanner
+        run: |
+          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip sonar-scanner.zip
+          echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
+ 
+      - name: Analyse du code avec SonarQube
         run: |
           sonar-scanner \
-            -Dsonar.projectKey=nicolasfprs_projet_devops\
-            -Dsonar.organization=nicolasfprs 
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.organization=nicolasfprs \
+          -Dsonar.projectKey=nicolasfprs_projet_devops \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
+
