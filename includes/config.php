@@ -1,6 +1,5 @@
 <?php 
-// Démarrer la session en début de fichier
-session_start();
+
 
 // Configuration sécurisée des cookies de session
 ini_set('session.cookie_httponly', 1);
@@ -8,6 +7,9 @@ ini_set('session.cookie_httponly', 1);
 // ini_set('session.cookie_secure', 1);
 ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.use_strict_mode', 1);
+
+// Démarrer la session en début de fichier
+session_start();
 
 // Générer un jeton CSRF s'il n'existe pas déjà
 if (!isset($_SESSION['csrf_token'])) {

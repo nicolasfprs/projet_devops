@@ -38,6 +38,9 @@ include('includes/config.php');
                 <li class="nav-item">
                   <a class="nav-link"  href="admin-login.php">Admin</a>
                 </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="register.php">Inscription</a>
+                </li>
               </ul>
               <form class="d-flex" role="search">
                 <button class="btn btn-danger" type="submit" href="">Recherche</button>
