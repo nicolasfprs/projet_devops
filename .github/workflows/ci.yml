@@ -1,6 +1,39 @@
-name: Deploy Note Website
+name: Test PHP App
 on: [push, pull_request]
-
 jobs:
-    test:
-        runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+        
+      - name: Configurer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'  # Adaptez a votre version de PHP Legacy
+          extensions: mbstring, intl, mysql  # Adaptez selon vos besoins
+          
+      - name: Verifier la syntaxe PHP
+        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+          
+  verify:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+        
+      - name: Configuration de SonarQube
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=nicolasfprs
+            -Dsonar.projectKey=nicolasfprs_projet_devops
+            -Dsonar.sources=.
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.php.file.suffixes=php,php3,php4,php5,phtml,inc
+            -Dsonar.exclusions=**/vendor/**,**/tests/**
+          
