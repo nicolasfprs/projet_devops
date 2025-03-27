@@ -1,26 +1,39 @@
-name: CI/CD for PHP App
- 
+name: Test PHP App
 on: [push, pull_request]
 jobs:
-  security:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le code
-        uses: actions/checkout@v3      
- 
-      - name: Installer SonarScanner
-        run: |
-          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-          unzip sonar-scanner.zip
-          echo "$PWD/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
- 
-      - name: Analyse du code avec SonarQube
-        run: |
-          sonar-scanner \
-          -Dsonar.organization=nicolasfprs \
-          -Dsonar.projectKey=nicolasfprs_projet_devops \
-          -Dsonar.sources=. \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-
-
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+        
+      - name: Configurer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'  # Adaptez a votre version de PHP Legacy
+          extensions: mbstring, intl, mysql  # Adaptez selon vos besoins
+          
+      - name: Verifier la syntaxe PHP
+        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+          
+  verify:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+        
+      - name: Configuration de SonarQube
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=nicolasfprs
+            -Dsonar.projectKey=nicolasfprs_projet_devops
+            -Dsonar.sources=.
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.php.file.suffixes=php,php3,php4,php5,phtml,inc
+            -Dsonar.exclusions=**/vendor/**,**/tests/**
+          
